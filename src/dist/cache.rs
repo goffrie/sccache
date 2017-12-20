@@ -1,11 +1,11 @@
 use crate::dist::Toolchain;
+use crypto::digest::Digest;
+use crypto::sha2::Sha512;
 use lru_disk_cache::{LruDiskCache, ReadSeek};
 use lru_disk_cache::Result as LruResult;
-use ring::digest::{SHA512, Context};
 use std::fs;
 use std::io::{self, BufReader, Read};
 use std::path::{Path, PathBuf};
-use crate::util;
 
 use crate::errors::*;
 
@@ -356,7 +356,7 @@ fn make_lru_key_path(key: &str) -> PathBuf {
 
 // Partially copied from util.rs
 fn hash_reader<R: Read + Send + 'static>(rdr: R) -> Result<String> {
-    let mut m = Context::new(&SHA512);
+    let mut sha = Sha512::new();
     let mut reader = BufReader::new(rdr);
     loop {
         let mut buffer = [0; 1024];
@@ -364,7 +364,7 @@ fn hash_reader<R: Read + Send + 'static>(rdr: R) -> Result<String> {
         if count == 0 {
             break;
         }
-        m.update(&buffer[..count]);
+        sha.input(&buffer[..count]);
     }
-    Ok(util::hex(m.finish().as_ref()))
+    Ok(sha.result_str())
 }

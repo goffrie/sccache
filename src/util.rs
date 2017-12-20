@@ -16,7 +16,8 @@ use byteorder::{BigEndian, ByteOrder};
 use futures::{future, Future};
 use futures_cpupool::CpuPool;
 use crate::mock_command::{CommandChild, RunCommand};
-use ring::digest::{Context, SHA512};
+use crypto::digest::Digest as CryptoDigest;
+use crypto::sha2::Sha512;
 use serde::Serialize;
 use std::ffi::{OsStr, OsString};
 use std::fs::File;
@@ -32,14 +33,12 @@ use crate::errors::*;
 
 #[derive(Clone)]
 pub struct Digest {
-    inner: Context,
+    inner: Sha512,
 }
 
 impl Digest {
     pub fn new() -> Digest {
-        Digest {
-            inner: Context::new(&SHA512),
-        }
+        Digest { inner: Sha512::new() }
     }
 
     /// Calculate the SHA-512 digest of the contents of `path`, running
@@ -69,27 +68,11 @@ impl Digest {
     }
 
     pub fn update(&mut self, bytes: &[u8]) {
-        self.inner.update(bytes);
+        self.inner.input(bytes);
     }
 
-    pub fn finish(self) -> String {
-        hex(self.inner.finish().as_ref())
-    }
-}
-
-pub fn hex(bytes: &[u8]) -> String {
-    let mut s = String::with_capacity(bytes.len() * 2);
-    for &byte in bytes {
-        s.push(hex(byte & 0xf));
-        s.push(hex((byte >> 4) & 0xf));
-    }
-    return s;
-
-    fn hex(byte: u8) -> char {
-        match byte {
-            0..=9 => (b'0' + byte) as char,
-            _ => (b'a' + byte - 10) as char,
-        }
+    pub fn finish(mut self) -> String {
+        self.inner.result_str()
     }
 }
 
