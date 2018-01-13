@@ -78,14 +78,19 @@ impl Bucket {
         })
     }
 
-    pub fn get(&self, key: &str) -> SFuture<Vec<u8>> {
+    pub fn get(&self, key: &str, creds: &AwsCredentials) -> SFuture<Vec<u8>> {
         let url = format!("{}{}", self.base_url, key);
         debug!("GET {}", url);
+
+        let date = time::now_utc().rfc822().to_string();
+        let mut request = Request::new(Method::GET, url.parse().unwrap());
+        let auth = self.auth("GET", &date, key, "", "", "", creds);
+        request.headers_mut().insert("Authorization", HeaderValue::from_str(&auth).expect("Invalid auth"));
+        request.headers_mut().insert("Date", HeaderValue::from_str(&date).expect("Invalid date"));
         let url2 = url.clone();
         Box::new(
             self.client
-                .get(&url[..])
-                .send()
+                .execute(request)
                 .chain_err(move || format!("failed GET: {}", url))
                 .and_then(|res| {
                     if res.status().is_success() {
