@@ -58,7 +58,8 @@ impl S3Cache {
         ];
         let provider = AutoRefreshingProvider::new(ChainProvider::with_profile_providers(profile_providers));
         //TODO: configurable SSL
-        let bucket = Rc::new(Bucket::new(bucket, endpoint, Ssl::No)?);
+        // DROPBOX CHANGE: enabled SSL
+        let bucket = Rc::new(Bucket::new(bucket, endpoint, Ssl::Yes)?);
         Ok(S3Cache {
             bucket: bucket,
             provider: provider,
